@@ -134,6 +134,32 @@ function App() {
     (RAW[String(sem)]||[]).forEach(t=>{delete np[`${sem}-${t[0]}-T`];delete np[`${sem}-${t[0]}-Q`];delete ns[`${sem}-${t[0]}-Q`];});
     setProgress(np);setStats(ns);persist(np,ns); };
 
+  const exportData=()=>{
+    const blob=new Blob([JSON.stringify({progress,stats,_v:6,_date:new Date().toISOString()},null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    const d=new Date(); const stamp=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    a.href=url; a.download=`backup-cronograma-${stamp}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+  };
+  const importData=(ev)=>{
+    const file=ev.target.files&&ev.target.files[0]; if(!file) return;
+    const r=new FileReader();
+    r.onload=()=>{
+      try{
+        const data=JSON.parse(r.result);
+        if(!data||typeof data!=="object"||!("progress" in data)) throw new Error("formato");
+        if(!confirm("Restaurar este backup? Isso substitui seu progresso atual.")) return;
+        const np=data.progress||{}, ns=data.stats||{};
+        setProgress(np); setStats(ns); persist(np,ns);
+        alert("Backup restaurado com sucesso!");
+      }catch(e){ alert("Arquivo inválido. Selecione um backup gerado pelo próprio app."); }
+    };
+    r.readAsText(file);
+    ev.target.value="";
+  };
+
   const tasks=RAW[String(sem)]||[];
   const schedule=buildSchedule(sem,tasks);
   const totalCards=tasks.length*2;
@@ -218,8 +244,12 @@ function App() {
                 <span style={{fontSize:19,fontWeight:900,color:pctColor(wPct)}}>{wPct}% <span style={{fontSize:12,color:"#64748B",fontWeight:600}}>({wA}/{wQ})</span></span>
               </div>
             )}
-            <div style={{textAlign:"right",marginTop:8}}>
-              <button onClick={resetSem} style={{background:"none",border:"1px solid #E2E8F0",color:"#64748B",fontSize:11,padding:"4px 10px",borderRadius:8,cursor:"pointer",fontWeight:700}}>↺ resetar semana</button>
+            <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10,flexWrap:"wrap"}}>
+              <button onClick={exportData} title="Baixar backup do progresso" style={{background:"#EEF2FF",border:"1px solid #C7D2FE",color:"#4F46E5",fontSize:12,padding:"6px 12px",borderRadius:9,cursor:"pointer",fontWeight:800}}>⬇️ Exportar backup</button>
+              <label style={{background:"#ECFDF5",border:"1px solid #A7F3D0",color:"#059669",fontSize:12,padding:"6px 12px",borderRadius:9,cursor:"pointer",fontWeight:800}}>⬆️ Importar backup
+                <input type="file" accept="application/json,.json" onChange={importData} style={{display:"none"}}/>
+              </label>
+              <button onClick={resetSem} style={{background:"none",border:"1px solid #E2E8F0",color:"#64748B",fontSize:12,padding:"6px 12px",borderRadius:9,cursor:"pointer",fontWeight:700}}>↺ resetar semana</button>
             </div>
           </div>
 
